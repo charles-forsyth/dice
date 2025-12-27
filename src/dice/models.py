@@ -11,6 +11,9 @@ class RollResult(BaseModel):
     rolls: List[DieRoll]
     total: int
     modifier: int = 0
+    # New fields for Advantage/Disadvantage context
+    dropped_rolls: List[DieRoll] = Field(default_factory=list)
+    method: str = "normal"  # normal, advantage, disadvantage
 
     @property
     def grand_total(self) -> int:

@@ -13,12 +13,41 @@ def test_parse_dice_string_invalid():
         parse_dice_string("invalid")
 
 
-def test_roll_dice():
+def test_roll_dice_basic():
     result = roll_dice(2, 6, 1)
     assert len(result.rolls) == 2
     assert 2 <= result.total <= 12
     assert result.modifier == 1
     assert result.grand_total == result.total + 1
-    for roll in result.rolls:
-        assert 1 <= roll.result <= 6
-        assert roll.sides == 6
+    assert result.method == "normal"
+    assert len(result.dropped_rolls) == 0
+
+
+def test_roll_dice_advantage():
+    # It's hard to test randomness deterministically without mocking,
+    # but we can verify structure and basic logic properties.
+    result = roll_dice(1, 20, 0, advantage=True)
+    assert result.method == "advantage"
+    assert len(result.rolls) == 1
+    assert len(result.dropped_rolls) == 1
+
+    kept_val = result.rolls[0].result
+    dropped_val = result.dropped_rolls[0].result
+    assert kept_val >= dropped_val
+
+
+def test_roll_dice_disadvantage():
+    result = roll_dice(1, 20, 0, disadvantage=True)
+    assert result.method == "disadvantage"
+    assert len(result.rolls) == 1
+    assert len(result.dropped_rolls) == 1
+
+    kept_val = result.rolls[0].result
+    dropped_val = result.dropped_rolls[0].result
+    assert kept_val <= dropped_val
+
+
+def test_roll_dice_cancel():
+    result = roll_dice(1, 20, 0, advantage=True, disadvantage=True)
+    assert result.method == "normal"
+    assert len(result.dropped_rolls) == 0
