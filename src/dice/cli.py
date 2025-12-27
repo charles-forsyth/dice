@@ -27,15 +27,36 @@ def roll(
     disadvantage: bool = typer.Option(
         False, "--disadvantage", "-dis", help="Roll twice and take the lower result"
     ),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Output only the total result"
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", "-J", help="Output the full result as JSON"
+    ),
 ) -> None:
     """Roll dice with flair!"""
     try:
         count, sides, modifier = parse_dice_string(notation)
     except ValueError as e:
-        console.print(f"[red]Error:[/red] {e}")
+        if not quiet and not json_output:
+            console.print(f"[red]Error:[/red] {e}")
+        elif json_output:
+            import json
+
+            console.print(json.dumps({"error": str(e)}))
+        else:
+            console.print("Error")
         raise typer.Exit(code=1)
 
     result = roll_dice(count, sides, modifier, advantage, disadvantage)
+
+    if json_output:
+        console.print(result.model_dump_json())
+        return
+
+    if quiet:
+        console.print(result.grand_total)
+        return
 
     # Theme processing
     color = "white"
