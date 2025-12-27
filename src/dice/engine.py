@@ -1,6 +1,6 @@
 import random
 import re
-from typing import Tuple
+from typing import Tuple, List
 from dice.models import DieRoll, RollResult
 
 
@@ -17,12 +17,61 @@ def parse_dice_string(dice_str: str) -> Tuple[int, int, int]:
     return count, sides, modifier
 
 
-def roll_dice(count: int, sides: int, modifier: int = 0) -> RollResult:
-    """Roll the specified dice and return a RollResult."""
-    rolls = []
-    for _ in range(count):
-        result = random.randint(1, sides)
-        rolls.append(DieRoll(sides=sides, result=result))
+def _roll_set(count: int, sides: int) -> List[DieRoll]:
+    """Helper to roll a set of dice."""
+    return [DieRoll(sides=sides, result=random.randint(1, sides)) for _ in range(count)]
 
-    total = sum(r.result for r in rolls)
-    return RollResult(rolls=rolls, total=total, modifier=modifier)
+
+def roll_dice(
+    count: int,
+    sides: int,
+    modifier: int = 0,
+    advantage: bool = False,
+    disadvantage: bool = False,
+) -> RollResult:
+    """
+    Roll dice with optional advantage or disadvantage.
+
+    If advantage/disadvantage is set, we roll the set twice and compare totals.
+    """
+    if advantage and disadvantage:
+        # cancel out
+        advantage = False
+        disadvantage = False
+
+    rolls1 = _roll_set(count, sides)
+    total1 = sum(r.result for r in rolls1)
+
+    if not advantage and not disadvantage:
+        return RollResult(rolls=rolls1, total=total1, modifier=modifier)
+
+    rolls2 = _roll_set(count, sides)
+    total2 = sum(r.result for r in rolls2)
+
+    # Determine winner
+    keep_set1 = True
+    if advantage:
+        if total2 > total1:
+            keep_set1 = False
+        method = "advantage"
+    else:  # disadvantage
+        if total2 < total1:
+            keep_set1 = False
+        method = "disadvantage"
+
+    if keep_set1:
+        return RollResult(
+            rolls=rolls1,
+            total=total1,
+            modifier=modifier,
+            dropped_rolls=rolls2,
+            method=method,
+        )
+    else:
+        return RollResult(
+            rolls=rolls2,
+            total=total2,
+            modifier=modifier,
+            dropped_rolls=rolls1,
+            method=method,
+        )
